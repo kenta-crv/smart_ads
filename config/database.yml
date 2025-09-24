@@ -1,0 +1,22 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  username: postgres
+  password: postgres
+  host: localhost
+  port: 5432
+
+development:
+  <<: *default
+  database: smart_ads_development
+
+test:
+  <<: *default
+  database: smart_ads_test
+
+production:
+  <<: *default
+  database: smart_ads_production
+  username: smart_ads
+  password: <%= ENV["SMART_ADS_DATABASE_PASSWORD"] %>
