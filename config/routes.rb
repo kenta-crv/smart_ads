@@ -16,12 +16,14 @@ Rails.application.routes.draw do
 
   # Dashboards
   namespace :admin do
+    get 'dashboard/index'
     root "dashboard#index"   # /admin
     resources :clients       # managed by admins
     resources :admins, only: [:index, :new, :create, :edit, :update, :destroy] # super_admin only
   end
 
-  namespace :client do
+  namespace :user do
+    get 'dashboard/index'
     root "dashboard#index"   # /client
     resources :campaigns
     resources :notifications
