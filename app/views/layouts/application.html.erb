@@ -16,8 +16,11 @@
     <%= render "shared/navbar" %>
 
     <!-- Main content -->
-   <main class="container mx-auto mt-28 px-5 flex items-center justify-center min-h-[calc(80vh-7rem)]">
-    <%= yield %>
-  </main>
+    <main class="container mx-auto mt-28 items-center justify-center min-h-[calc(80vh-7rem)]">
+      <%= yield %>
+    </main>
+
+    <!-- Alpine.js -->
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   </body>
 </html>

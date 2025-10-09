@@ -1,4 +1,77 @@
-<div>
-  <h1 class="font-bold text-4xl">Admin::Dashboard#index</h1>
-  <p>Find me in app/views/admin/dashboard/index.html.erb</p>
+<div class="px-8 py-10 bg-gray-50 min-h-screen">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <!-- Users -->
+    <div class="bg-white rounded-3xl shadow-lg p-8 flex flex-col justify-between h-60">
+      <div class>
+        <h2 class="text-2xl font-semibold text-gray-800">Users</h2>
+        <p class="text-4xl font-bold text-indigo-600 mt-4"><%= User.count %></p>
+      </div>
+      <div class="mt-6 flex space-x-4">
+        <%= link_to "View", "#", class: "px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" %>
+        <%= link_to "Manage", "#", class: "px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300" %>
+      </div>
+    </div>
+
+    <!-- Push Subscriptions -->
+    <div class="bg-white rounded-3xl shadow-lg p-8 flex flex-col justify-between h-60">
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-800">Push Subscriptions</h2>
+        <p class="text-4xl font-bold text-indigo-600 mt-4"><%= PushSubscription.count %></p>
+      </div>
+      <div class="mt-6 flex space-x-4">
+        <%= link_to "View", "#", class: "px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" %>
+        <%= link_to "Manage", "#", class: "px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300" %>
+      </div>
+    </div>
+
+    <!-- Campaigns -->
+    <div class="bg-white rounded-3xl shadow-lg p-8 flex flex-col justify-between h-60">
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-800">Campaigns</h2>
+        <p class="text-4xl font-bold text-indigo-600 mt-4"><%= Campaign.count %></p>
+      </div>
+      <div class="mt-6 flex space-x-4">
+        <%= link_to "View", "#", class: "px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" %>
+        <%= link_to "Manage", "#", class: "px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300" %>
+      </div>
+    </div>
+
+    <!-- Campaign Results -->
+    <div class="bg-white rounded-3xl shadow-lg p-8 flex flex-col justify-between h-60">
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-800">Campaign Results</h2>
+        <p class="text-4xl font-bold text-indigo-600 mt-4"><%= CampaignResult.count %></p>
+      </div>
+      <div class="mt-6 flex space-x-4">
+        <%= link_to "View", "#", class: "px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" %>
+        <%= link_to "Manage", "#", class: "px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300" %>
+      </div>
+    </div>
+
+    <!-- Install Scripts -->
+    <div class="bg-white rounded-3xl shadow-lg p-8 flex flex-col justify-between h-60">
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-800">Install Scripts</h2>
+        <p class="text-4xl font-bold text-indigo-600 mt-4"><%= InstallScript.count %></p>
+      </div>
+      <div class="mt-6 flex space-x-4">
+        <%= link_to "View", "#", class: "px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" %>
+        <%= link_to "Manage", "#", class: "px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300" %>
+      </div>
+    </div>
+
+    <!-- Admins -->
+    <div class="bg-white rounded-3xl shadow-lg p-8 flex flex-col justify-between h-60">
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-800">Admins</h2>
+        <p class="text-4xl font-bold text-indigo-600 mt-4"><%= Admin.count %></p>
+      </div>
+      <div class="mt-6 flex space-x-4">
+        <%= link_to "View", "#", class: "px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" %>
+        <%= link_to "Manage", "#", class: "px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300" %>
+      </div>
+    </div>
+  </div>
 </div>
+
+
