@@ -10,8 +10,8 @@ class User < ApplicationRecord
   has_one :install_script, dependent: :destroy
 
   # Validations
-  validates :first_name, :last_name, :company_name, :domain, :api_key, presence: true
-  validates :api_key, uniqueness: true
+  validates :first_name, :last_name, presence: true
+  # validates :api_key, uniqueness: true
 
   # Methods
   def full_name
