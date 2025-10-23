@@ -1,8 +1,13 @@
 <div class="px-8 py-10 bg-gray-50 min-h-screen">
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+  <h1 class="text-4xl font-bold text-gray-900 mb-10">
+    <%= current_admin.super_admin? ? "Super Admin Panel" : "Admin Panel" %>
+  </h1>
+
+  <!-- Metric Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
     <!-- Users -->
     <div class="bg-white rounded-3xl shadow-lg p-8 flex flex-col justify-between h-60">
-      <div class>
+      <div>
         <h2 class="text-2xl font-semibold text-gray-800">Users</h2>
         <p class="text-4xl font-bold text-indigo-600 mt-4"><%= User.count %></p>
       </div>
@@ -11,6 +16,20 @@
         <%= link_to "Manage", "#", class: "px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300" %>
       </div>
     </div>
+
+    <!-- Admins (only visible to super admin) -->
+    <% if current_admin.super_admin? %>
+      <div class="bg-white rounded-3xl shadow-lg p-8 flex flex-col justify-between h-60">
+        <div>
+          <h2 class="text-2xl font-semibold text-gray-800">Admins</h2>
+          <p class="text-4xl font-bold text-indigo-600 mt-4"><%= Admin.count %></p>
+        </div>
+        <div class="mt-6 flex space-x-4">
+          <%= link_to "View", "#", class: "px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" %>
+          <%= link_to "Manage", "#", class: "px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300" %>
+        </div>
+      </div>
+    <% end %>
 
     <!-- Push Subscriptions -->
     <div class="bg-white rounded-3xl shadow-lg p-8 flex flex-col justify-between h-60">
@@ -59,19 +78,110 @@
         <%= link_to "Manage", "#", class: "px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300" %>
       </div>
     </div>
+  </div>
 
-    <!-- Admins -->
-    <div class="bg-white rounded-3xl shadow-lg p-8 flex flex-col justify-between h-60">
-      <div>
-        <h2 class="text-2xl font-semibold text-gray-800">Admins</h2>
-        <p class="text-4xl font-bold text-indigo-600 mt-4"><%= Admin.count %></p>
-      </div>
-      <div class="mt-6 flex space-x-4">
-        <%= link_to "View", "#", class: "px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" %>
-        <%= link_to "Manage", "#", class: "px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300" %>
+  <!-- Full-Width Tables Section -->
+  <div class="space-y-16">
+    <!-- Users Table -->
+    <div>
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Users</h2>
+      <div class="bg-white rounded-xl shadow overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-gray-100 text-gray-600 uppercase text-sm">
+            <tr>
+              <th class="py-3 px-6">ID</th>
+              <th class="py-3 px-6">Email</th>
+              <th class="py-3 px-6">Name</th>
+              <th class="py-3 px-6">Created At</th>
+              <th class="py-3 px-6 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-700">
+            <% User.all.each do |user| %>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="py-3 px-6"><%= user.id %></td>
+                <td class="py-3 px-6"><%= user.email %></td>
+                <td class="py-3 px-6"><%= "#{user.first_name} #{user.last_name}" %></td>
+                <td class="py-3 px-6"><%= user.created_at.strftime("%Y-%m-%d") %></td>
+                <td class="py-3 px-6 text-right space-x-3">
+                  <%= link_to "👁", "#", class: "hover:text-indigo-600" %>
+                  <%= link_to "✏️", "#", class: "hover:text-yellow-600" %>
+                  <%= link_to "🗑", "#", data: { turbo_method: :delete, confirm: "Are you sure?" }, class: "hover:text-red-600" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
       </div>
     </div>
+
+    <!-- Admins Table (only visible to super admin) -->
+    <% if current_admin.super_admin? %>
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Admins</h2>
+        <div class="bg-white rounded-xl shadow overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-gray-100 text-gray-600 uppercase text-sm">
+              <tr>
+                <th class="py-3 px-6">ID</th>
+                <th class="py-3 px-6">Email</th>
+                <th class="py-3 px-6">Created At</th>
+                <th class="py-3 px-6 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-700">
+              <% Admin.all.each do |admin| %>
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="py-3 px-6"><%= admin.id %></td>
+                  <td class="py-3 px-6"><%= admin.email %></td>
+                  <td class="py-3 px-6"><%= admin.created_at.strftime("%Y-%m-%d") %></td>
+                  <td class="py-3 px-6 text-right space-x-3">
+                    <%= link_to "👁", "#", class: "hover:text-indigo-600" %>
+                    <%= link_to "✏️", "#", class: "hover:text-yellow-600" %>
+                    <%= link_to "🗑", "#", data: { turbo_method: :delete, confirm: "Are you sure?" }, class: "hover:text-red-600" %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Push Subscriptions, Campaigns, Campaign Results, Install Scripts Tables -->
+    <% { 
+      "Push Subscriptions" => PushSubscription.all,
+      "Campaigns" => Campaign.all,
+      "Campaign Results" => CampaignResult.all,
+      "Install Scripts" => InstallScript.all 
+    }.each do |title, records| %>
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4"><%= title %></h2>
+        <div class="bg-white rounded-xl shadow overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-gray-100 text-gray-600 uppercase text-sm">
+              <tr>
+                <th class="py-3 px-6">ID</th>
+                <th class="py-3 px-6">Created At</th>
+                <th class="py-3 px-6 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-700">
+              <% records.each do |r| %>
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="py-3 px-6"><%= r.id %></td>
+                  <td class="py-3 px-6"><%= r.created_at.strftime("%Y-%m-%d") %></td>
+                  <td class="py-3 px-6 text-right space-x-3">
+                    <%= link_to "👁", "#", class: "hover:text-indigo-600" %>
+                    <%= link_to "✏️", "#", class: "hover:text-yellow-600" %>
+                    <%= link_to "🗑", "#", data: { turbo_method: :delete, confirm: "Are you sure?" }, class: "hover:text-red-600" %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>
-
-
