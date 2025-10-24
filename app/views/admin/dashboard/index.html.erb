@@ -93,7 +93,10 @@
 
     <!-- Users Table -->
     <div>
-      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Users</h2>
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
+        Users
+        <%= link_to "(Create New)", new_user_path, class: "ml-2 text-indigo-600 hover:text-indigo-800 text-base font-medium" %>
+      </h2>
       <div class="bg-white rounded-xl shadow overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead class="bg-gray-100 text-gray-600 uppercase text-sm">
@@ -119,9 +122,21 @@
                 <td class="py-3 px-6"><%= u.domain %></td>
                 <td class="py-3 px-6"><%= u.created_at.strftime("%Y-%m-%d") %></td>
                 <td class="py-3 px-6 text-right space-x-3">
-                  <%= link_to "👁", "#", class: "hover:text-indigo-600" %>
-                  <%= link_to "✏️", "#", class: "hover:text-yellow-600" %>
-                  <%= link_to "🗑", "#", data: { turbo_method: :delete, confirm: "Are you sure?" }, class: "hover:text-red-600" %>
+                  <!-- View -->
+                  <%= link_to "👁", user_path(u),
+                        class: "hover:text-indigo-600",
+                        title: "View User" %>
+
+                  <!-- Edit -->
+                  <%= link_to "✏️", edit_user_path(u),
+                        class: "hover:text-yellow-600",
+                        title: "Edit User" %>
+
+                  <!-- Delete -->
+                  <%= link_to "🗑", user_path(u),
+                        data: { turbo_method: :delete, confirm: "Are you sure?" },
+                        class: "hover:text-red-600",
+                        title: "Delete User" %>
                 </td>
               </tr>
             <% end %>
