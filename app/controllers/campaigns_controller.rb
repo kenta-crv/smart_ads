@@ -1,6 +1,6 @@
 class CampaignsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_campaign, only: [:show, :edit, :update, :destroy]
+  before_action :set_campaign, only: [:show, :edit, :update, :destroy, :send_campaign]
 
   def index
     @campaigns = current_user.campaigns.order(created_at: :desc)
@@ -34,6 +34,35 @@ class CampaignsController < ApplicationController
   def destroy
     @campaign.destroy
     redirect_to user_campaigns_path(current_user), notice: "Campaign deleted successfully."
+  end
+
+  def send_campaign
+    @campaign = Campaign.find(params[:id])
+    
+    # Simulate sending
+    @campaign.update(status: "sending")
+
+    # Create a new push subscription for the user (simulated)
+    new_subscription = @campaign.user.push_subscriptions.create!(
+      endpoint: "https://dummy.push.service/#{SecureRandom.uuid}",
+      keys: { p256dh: SecureRandom.hex(16), auth: SecureRandom.hex(8) },
+      browser: "Chrome",
+      status: "active"
+    )
+
+    # Record results for all active subscriptions
+    @campaign.user.push_subscriptions.where(status: "active").each do |sub|
+      CampaignResult.create!(
+        campaign: @campaign,
+        push_subscription: sub,
+        status: "completed",
+        delivered_at: Time.current
+      )
+    end
+
+    @campaign.update(status: "completed")
+
+    redirect_to user_campaigns_path(@campaign.user), notice: "Campaign sent successfully!"
   end
 
   private

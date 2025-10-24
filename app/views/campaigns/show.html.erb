@@ -9,8 +9,12 @@
     <p><strong>Created At:</strong> <%= @campaign.created_at.strftime("%b %d, %Y") %></p>
   </div>
 
-  <div class="mt-8 space-x-2">
-    <%= link_to "Edit", edit_user_campaign_path(@campaign), class: "bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded" %>
-    <%= link_to "Back", user_campaigns_path, class: "bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded" %>
+  <div class="mt-8 flex space-x-4">
+    <%= link_to "Edit", edit_user_campaign_path(@campaign), class: "bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-lg shadow" %>
+    <%= link_to "Back", user_campaigns_path, class: "bg-gray-600 hover:bg-gray-700 text-black px-4 py-2 rounded-lg shadow" %>
+    <%= link_to "Send Now",
+        send_campaign_user_campaign_path(@campaign.user, @campaign),
+        data: { turbo_method: :post, turbo_confirm: "Are you sure you want to send this campaign?" },
+        class: "bg-green-600 hover:bg-green-700 text-black px-4 py-2 rounded-lg shadow" %>
   </div>
 </div>

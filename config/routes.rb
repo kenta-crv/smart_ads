@@ -29,9 +29,20 @@ Rails.application.routes.draw do
     resources :notifications
   end
 
-  # Users and nested campaigns
+  # Users and nested resources
   resources :users do
-    resources :campaigns
+    # Campaigns nested under users
+    resources :campaigns do
+      post :send_campaign, on: :member
+    end
+
+    # Install script (singleton per user)
+    resource :install_script, only: [:show] do
+      get :test
+    end
+
+    # Push subscriptions
+    resources :push_subscriptions, only: [:index, :create]
   end
 
   # Health check
