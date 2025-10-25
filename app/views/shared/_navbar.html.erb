@@ -13,8 +13,23 @@
       <!-- Center (Links) -->
       <div class="hidden md:flex space-x-6 items-center">
         <%= link_to "Home", root_path, class: "hover:text-gray-100 transition" %>
-        <%= link_to "Features", "#features", class: "hover:text-gray-100 transition" %>
-        <%= link_to "Pricing", "#pricing", class: "hover:text-gray-100 transition" %>
+
+        <% if admin_signed_in? %>
+          <%= link_to "Dashboard", admin_root_path, class: "hover:text-gray-100 transition" %>
+          <%= link_to "Users", users_path, class: "hover:text-gray-100 transition" %>
+          <%= link_to "Campaigns", "#", class: "opacity-50 cursor-not-allowed hover:text-gray-100 transition" %> <!-- Admin doesn't access via nested users -->
+          <%= link_to "Install Script", user_install_script_path(User.last), class: "hover:text-gray-100 transition" %>
+        <% elsif user_signed_in? %>
+          <%= link_to "Dashboard", user_root_path, class: "hover:text-gray-100 transition" %>
+          <%= link_to "Users", users_path, class: "hover:text-gray-100 transition" %>
+          <%= link_to "Campaigns", user_campaigns_path(current_user), class: "hover:text-gray-100 transition" %>
+          <%= link_to "Install Script", user_install_script_path(current_user), class: "hover:text-gray-100 transition" %>
+        <% else %>
+          <%= link_to "Dashboard", "#Dashboard", class: "hover:text-gray-100 transition" %>
+          <%= link_to "Campaigns", "#Campaigns", class: "hover:text-gray-100 transition" %>
+          <%= link_to "Users", "#Users", class: "hover:text-gray-100 transition" %>
+        <% end %>
+
         <%= link_to "Contact", "#contact", class: "hover:text-gray-100 transition" %>
       </div>
 

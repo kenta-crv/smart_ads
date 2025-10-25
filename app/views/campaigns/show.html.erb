@@ -1,0 +1,20 @@
+<div class="max-w-4xl mx-auto p-8 bg-white rounded-lg shadow">
+  <h1 class="text-3xl font-bold mb-4"><%= @campaign.title %></h1>
+  <p class="text-gray-700 mb-6"><%= @campaign.body %></p>
+
+  <div class="grid grid-cols-2 gap-4 text-gray-600">
+    <p><strong>Status:</strong> <%= @campaign.status.capitalize %></p>
+    <p><strong>Scheduled At:</strong> <%= @campaign.scheduled_at&.strftime("%b %d, %Y %H:%M") || "-" %></p>
+    <p><strong>Target URL:</strong> <%= @campaign.target_url.presence || "-" %></p>
+    <p><strong>Created At:</strong> <%= @campaign.created_at.strftime("%b %d, %Y") %></p>
+  </div>
+
+  <div class="mt-8 flex space-x-4">
+    <%= link_to "Edit", edit_user_campaign_path(@campaign), class: "bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-lg shadow" %>
+    <%= link_to "Back", user_campaigns_path, class: "bg-gray-600 hover:bg-gray-700 text-black px-4 py-2 rounded-lg shadow" %>
+    <%= link_to "Send Now",
+        send_campaign_user_campaign_path(@campaign.user, @campaign),
+        data: { turbo_method: :post, turbo_confirm: "Are you sure you want to send this campaign?" },
+        class: "bg-green-600 hover:bg-green-700 text-black px-4 py-2 rounded-lg shadow" %>
+  </div>
+</div>

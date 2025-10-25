@@ -1,0 +1,12 @@
+<h2 class="text-2xl font-semibold text-gray-800 mb-4">
+  Push Subscriptions for <%= @user.name %>
+</h2>
+
+<ul class="bg-white rounded-xl shadow divide-y">
+  <% @subscriptions.each do |sub| %>
+    <li class="p-4">
+      <strong>Endpoint:</strong> <%= sub.endpoint %><br>
+      <strong>Created:</strong> <%= sub.created_at.strftime("%Y-%m-%d") %>
+    </li>
+  <% end %>
+</ul>
