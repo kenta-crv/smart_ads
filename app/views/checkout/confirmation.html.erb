@@ -1,0 +1,75 @@
+<div class="checkout-container">
+  <h1>決済確認</h1>
+  <p>プラン: <%= @description %></p>
+  <p>金額: <%= @amount %> 円</p>
+
+  <%= form_with url: checkout_create_path, method: :post, id: "payment-form" do |f| %>
+    <%= hidden_field_tag :plan_type, @plan_type %>
+    <%= hidden_field_tag :campaign_id, @campaign_id if @campaign_id %>
+
+    <div id="card-element" class="border p-2 rounded"></div>
+
+    <div id="card-errors" class="text-red-500"></div>
+
+    <%= submit_tag "決済を完了する", class: "bg-blue-500 text-white py-2 px-4 rounded" %>
+  <% end %>
+</div>
+
+<script>
+  document.addEventListener('turbo:load', function() {
+    if (typeof Payjp === 'undefined') {
+      console.error('Payjp SDK not loaded.');
+      return;
+    }
+
+    const payjp = Payjp('<%= j @payjp_public_key %>');
+    const elements = payjp.elements();
+    const cardElement = elements.create('card', {
+      style: {
+        base: {
+          fontSize: '16px',
+          color: '#333',
+          '::placeholder': {
+            color: '#aab7c4'
+          }
+        },
+        invalid: {
+          color: '#fa755a'
+        }
+      }
+    });
+
+    const mountEl = document.getElementById('card-element');
+    if (mountEl && mountEl.innerHTML === '') {
+      cardElement.mount('#card-element');
+    }
+
+    const form = document.getElementById('payment-form');
+    const errorEl = document.getElementById('card-errors');
+
+    form.addEventListener('submit', async function(event) {
+      event.preventDefault();
+      errorEl.textContent = '';
+
+      try {
+        const result = await payjp.createToken(cardElement);
+
+        if (result.error) {
+          errorEl.textContent = result.error.message || 'カード情報にエラーがあります。';
+          console.error('Payjp error:', result.error);
+        } else {
+          const tokenInput = document.createElement('input');
+          tokenInput.setAttribute('type', 'hidden');
+          tokenInput.setAttribute('name', 'payjp_token');
+          tokenInput.setAttribute('value', result.id);
+          form.appendChild(tokenInput);
+
+          form.submit();
+        }
+      } catch (err) {
+        errorEl.textContent = '決済処理中にエラーが発生しました。';
+        console.error('Unexpected error:', err);
+      }
+    });
+  });
+</script>

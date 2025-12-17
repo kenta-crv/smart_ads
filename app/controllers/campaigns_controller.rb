@@ -1,6 +1,6 @@
 class CampaignsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_campaign, only: [:show, :edit, :update, :destroy, :send_campaign]
+  before_action :set_campaign, only: [:show, :edit, :update, :destroy, :send_campaign, :confirm_payment]
 
   def index
     @campaigns = current_user.campaigns.order(created_at: :desc)
@@ -36,33 +36,62 @@ class CampaignsController < ApplicationController
     redirect_to user_campaigns_path(current_user), notice: "Campaign deleted successfully."
   end
 
-  def send_campaign
-    @campaign = Campaign.find(params[:id])
+  def confirm_payment
+    @campaign = current_user.campaigns.find(params[:id])
+    recipient_count = current_user.push_subscriptions.where(status: "active").count
+    @delivery_cost = recipient_count * Subscription::DELIVERY_COST
     
-    # Simulate sending
-    @campaign.update(status: "sending")
+    unless current_user.can_send_campaign?(recipient_count)
+      redirect_to user_campaigns_path(current_user), 
+                  alert: "配信数の上限に達しています。プランをアップグレードしてください。"
+      return
+    end
 
-    # Create a new push subscription for the user (simulated)
-    new_subscription = @campaign.user.push_subscriptions.create!(
-      endpoint: "https://dummy.push.service/#{SecureRandom.uuid}",
-      keys: { p256dh: SecureRandom.hex(16), auth: SecureRandom.hex(8) },
-      browser: "Chrome",
-      status: "active"
-    )
+    subscription = current_user.current_subscription
+    unless subscription&.can_send_delivery?(recipient_count)
+      redirect_to user_campaigns_path(current_user),
+                  alert: "配信数の上限に達しています。プランをアップグレードしてください。"
+      return
+    end
+  end
+
+  def send_campaign
+    recipient_count = current_user.push_subscriptions.where(status: "active").count
+    
+    delivery_cost = recipient_count * Subscription::DELIVERY_COST
+    
+    subscription = current_user.current_subscription
+    unless subscription&.can_send_delivery?(recipient_count)
+      redirect_to user_campaigns_path(current_user),
+                  alert: "配信数の上限に達しています。プランをアップグレードしてください。"
+      return
+    end
+
+    if delivery_cost > 0
+      redirect_to confirm_payment_user_campaign_path(current_user, @campaign)
+      return
+    end
+
+    send_campaign_directly(@campaign)
+    redirect_to user_campaigns_path(@campaign.user), notice: "キャンペーンを送信しました！"
+  end
+
+  private
+
+  def send_campaign_directly(campaign)
+    campaign.update(status: "sending")
 
     # Record results for all active subscriptions
-    @campaign.user.push_subscriptions.where(status: "active").each do |sub|
+    campaign.user.push_subscriptions.where(status: "active").each do |sub|
       CampaignResult.create!(
-        campaign: @campaign,
+        campaign: campaign,
         push_subscription: sub,
         status: "completed",
         delivered_at: Time.current
       )
     end
 
-    @campaign.update(status: "completed")
-
-    redirect_to user_campaigns_path(@campaign.user), notice: "Campaign sent successfully!"
+    campaign.update(status: "completed")
   end
 
   private
