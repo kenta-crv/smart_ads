@@ -10,6 +10,18 @@
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
     <script src="https://js.pay.jp/v2/pay.js"></script>
+    <script>
+        document.addEventListener('turbo:load', function () {
+            if (typeof Payjp === 'undefined') {
+            console.error('Pay.jp SDK failed to load');
+            return;
+            }
+
+            if (!window.payjpInstance) {
+            window.payjpInstance = Payjp('<%= @payjp_public_key || Rails.application.credentials.dig(:payjp, :public_key) || ENV['PAYJP_PUBLIC_KEY'] %>');
+            }
+        });
+    </script>
   </head>
 
   <body class="bg-gray-50 text-gray-800">
