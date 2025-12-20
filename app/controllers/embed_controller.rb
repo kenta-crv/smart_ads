@@ -1,12 +1,24 @@
 class EmbedController < ApplicationController
   skip_before_action :verify_authenticity_token
   before_action :set_user_by_api_key
+  after_action :set_cors_headers
+
+  def set_cors_headers
+    headers['Access-Control-Allow-Origin'] = '*'
+    headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    headers['Access-Control-Allow-Headers'] = 'Content-Type'
+  end
 
   def show
     render js: embed_script, content_type: 'application/javascript'
   end
 
   def register
+    if request.method == 'OPTIONS'
+      head :ok
+      return
+    end
+    
     subscription_data = JSON.parse(request.body.read)
     
     if @user
@@ -50,8 +62,29 @@ class EmbedController < ApplicationController
         var API_KEY = '#{params[:api_key]}';
         var API_URL = '#{request.base_url}';
         
-        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-          console.warn('This browser does not support push notifications');
+        if (!('Notification' in window)) {
+          console.warn('This browser does not support notifications');
+          return;
+        }
+        
+        if (window.location.protocol === 'file:') {
+          console.warn('⚠️ Service Workers require HTTP/HTTPS protocol.');
+          console.warn('📝 For testing, please use:');
+          console.warn('   1. http://localhost:3000/test_embed.html');
+          console.warn('   2. Or serve your HTML file via a local web server');
+          console.warn('   3. Or use ngrok to create a public URL');
+        }
+        
+        if (!('serviceWorker' in navigator)) {
+          console.warn('Service Workers are not supported in this browser');
+          if (window.location.protocol === 'file:') {
+            console.warn('Note: Service Workers also require HTTP/HTTPS (not file://)');
+          }
+          return;
+        }
+        
+        if (!('PushManager' in window)) {
+          console.warn('Push Manager is not supported in this browser');
           return;
         }
         
@@ -70,18 +103,29 @@ class EmbedController < ApplicationController
         }
         
         function registerServiceWorker() {
+          if (window.location.protocol === 'file:') {
+            console.error('❌ Cannot register Service Worker from file:// protocol');
+            console.error('Please use http://localhost:3000/test_embed.html for testing');
+            return;
+          }
+          
           navigator.serviceWorker.register('/service-worker.js')
             .then(function(registration) {
+              console.log('Service Worker registered successfully');
               return registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array('#{@user&.api_key || 'public_key_placeholder'}')
               });
             })
             .then(function(subscription) {
+              console.log('Push subscription created successfully');
               sendSubscriptionToServer(subscription);
             })
             .catch(function(error) {
               console.error('Service Worker registration failed:', error);
+              if (error.message.includes('protocol') || error.message.includes('file:')) {
+                console.error('❌ Service Workers require HTTP/HTTPS. Use http://localhost:3000/test_embed.html');
+              }
             });
         }
         
@@ -111,7 +155,7 @@ class EmbedController < ApplicationController
             }
           })
           .catch(function(error) {
-            console.error('Error registering subscription:', error);
+            console.error('Error rwegistering subscription:', error);
           });
         }
         

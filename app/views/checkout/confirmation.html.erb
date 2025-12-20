@@ -37,17 +37,32 @@
 </div>
 
 <script>
+  (function() {
+    const reloadKey = 'checkout_confirmation_loaded';
+    const hasReloaded = sessionStorage.getItem(reloadKey);
+    
+    if (!hasReloaded) {
+      sessionStorage.setItem(reloadKey, 'true');
+      const url = new URL(window.location.href);
+      url.searchParams.set('_reload', Date.now().toString());
+      window.location.href = url.toString();
+      return;
+    }
+  })();
+
   document.addEventListener('turbo:load', function() {
     const cardElementDiv = document.getElementById('card-element');
     if (!cardElementDiv) return;
 
     if (typeof Payjp === 'undefined' || !window.payjpInstance) {
-      console.error('Payjp SDK not loaded.');
-      const errorEl = document.getElementById('card-errors');
-      if (errorEl) {
-        errorEl.textContent = '決済システムの読み込みに失敗しました。ページを再読み込みしてください。';
-        errorEl.classList.add('text-red-600');
-      }
+      console.error('Payjp SDK not loaded, performing hard reload...');
+      setTimeout(function() {
+        if (typeof Payjp === 'undefined' || !window.payjpInstance) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('_reload', Date.now().toString());
+          window.location.href = url.toString();
+        }
+      }, 500);
       return;
     }
 
