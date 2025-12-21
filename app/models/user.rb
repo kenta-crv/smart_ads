@@ -106,8 +106,15 @@ class User < ApplicationRecord
   end
 
   after_create :initialize_trial_subscription, if: :new_record?
+  before_create :generate_api_key_if_blank
 
   private
+
+  def generate_api_key_if_blank
+    if api_key.blank?
+      self.api_key = SecureRandom.hex(32)
+    end
+  end
 
   def initialize_trial_subscription
     subscriptions.create!(
