@@ -12,6 +12,15 @@
           <span class="text-gray-900 font-bold text-2xl"><%= number_with_delimiter(@amount) %> 円</span>
         </div>
       </div>
+      <% if @plan_type == 'trial' %>
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+          <p class="text-blue-800 text-sm">
+            <strong>無料トライアルについて:</strong><br>
+            カード情報を登録していただきますが、今すぐ請求されることはありません。<br>
+            15日間の無料トライアル終了後、自動的に標準プラン（¥98,000/月）へ切り替わり、その時点で請求されます。
+          </p>
+        </div>
+      <% end %>
     </div>
 
     <%= form_with url: checkout_create_path, method: :post, id: "payment-form" do |f| %>
@@ -28,7 +37,7 @@
       </div>
 
       <div class="pt-4">
-        <%= submit_tag "決済を完了する", 
+        <%= submit_tag @plan_type == 'trial' ? "無料トライアルを開始" : "決済を完了する", 
             class: "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed",
             id: "submit-button" %>
       </div>
