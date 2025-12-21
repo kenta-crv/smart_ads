@@ -43,6 +43,68 @@ class User < ApplicationRecord
     sub.can_send_delivery?(recipient_count)
   end
 
+  def check_and_upgrade_expired_trial
+    return unless subscription_plan == "trial"
+    return unless trial_ends_at.present?
+    return if trial_ends_at > Time.current
+
+    unless payjp_customer_id.present?
+      Rails.logger.error "User #{id} trial expired but no PayJP customer ID found"
+      return nil
+    end
+
+    begin
+      amount = Subscription::PLAN_PRICES[:standard]
+      
+      charge = Payjp::Charge.create(
+        amount: amount,
+        currency: 'jpy',
+        customer: payjp_customer_id,
+        description: "Standard Plan subscription (trial upgrade)"
+      )
+
+      if charge.paid
+        subscriptions.where(status: :active).update_all(status: :cancelled)
+        
+        subscription = subscriptions.create!(
+          plan_type: :standard,
+          status: :active,
+          payjp_subscription_id: charge.id,
+          trial_ends_at: nil
+        )
+
+        update!(
+          subscription_plan: "standard",
+          subscription_status: "active",
+          trial_ends_at: nil
+        )
+
+        payments.create!(
+          campaign_id: nil,
+          amount: amount,
+          payjp_charge_id: charge.id,
+          status: charge.paid ? 'succeeded' : 'failed',
+          description: "Standard Plan subscription (trial upgrade)"
+        )
+
+        Rails.logger.info "User #{id} trial expired, charged and upgraded to standard plan"
+        subscription
+      else
+        Rails.logger.error "User #{id} trial expired but charge failed: #{charge.failure_message}"
+        subscriptions.where(status: :active).update_all(status: :cancelled)
+        update!(
+          subscription_plan: "standard",
+          subscription_status: "active",
+          trial_ends_at: nil
+        )
+        nil
+      end
+    rescue => e
+      Rails.logger.error "Error upgrading trial for user #{id}: #{e.message}"
+      nil
+    end
+  end
+
   after_create :initialize_trial_subscription, if: :new_record?
 
   private
