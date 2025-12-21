@@ -1,0 +1,104 @@
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-4xl font-bold text-gray-900 mb-8 text-center">プラン選択</h1>
+
+    <% if @is_new_account %>
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+        <p class="text-blue-800">新規アカウントは15日間の無料トライアルが利用できます（最大2配信まで）。</p>
+      </div>
+    <% end %>
+
+    <div class="grid md:grid-cols-3 gap-8">
+      <% if @is_new_account %>
+        <div class="bg-white rounded-lg shadow-lg p-8 border-2 border-blue-200">
+          <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">無料トライアル</h2>
+            <p class="text-4xl font-bold text-blue-600 mb-4">¥0</p>
+            <p class="text-gray-600">15日間</p>
+          </div>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-center">
+              <svg class="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span>最大2配信まで</span>
+            </li>
+            <li class="flex items-center">
+              <svg class="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span>15日間無料</span>
+            </li>
+            <li class="flex items-center">
+              <svg class="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span>自動的に標準プランへ</span>
+            </li>
+          </ul>
+          <%= form_with url: select_plan_path, method: :post do |f| %>
+            <%= hidden_field_tag :plan_type, "trial" %>
+            <%= f.submit "無料トライアルを開始", class: "w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 font-medium" %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="bg-white rounded-lg shadow-lg p-8 <%= @current_subscription&.plan_type == 'standard' ? 'border-2 border-indigo-500' : '' %>">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">標準プラン</h2>
+          <p class="text-4xl font-bold text-indigo-600 mb-4">¥98,000</p>
+          <p class="text-gray-600">月額</p>
+        </div>
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-center">
+            <svg class="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span>最大50配信まで</span>
+          </li>
+          <li class="flex items-center">
+            <svg class="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span>1配信あたり¥50</span>
+          </li>
+        </ul>
+        <% if @current_subscription&.plan_type == 'standard' %>
+          <button disabled class="w-full bg-gray-300 text-gray-600 py-3 px-6 rounded-lg font-medium cursor-not-allowed">現在のプラン</button>
+        <% else %>
+          <%= link_to "このプランを選択", checkout_confirmation_path(plan_type: "standard"), 
+              class: "block w-full bg-indigo-600 text-white py-3 px-6 rounded-lg hover:bg-indigo-700 font-medium text-center" %>
+        <% end %>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-lg p-8 <%= @current_subscription&.plan_type == 'enterprise' ? 'border-2 border-indigo-500' : '' %>">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">エンタープライズプラン</h2>
+          <p class="text-4xl font-bold text-indigo-600 mb-4">¥198,000</p>
+          <p class="text-gray-600">月額</p>
+        </div>
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-center">
+            <svg class="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span>無制限配信</span>
+          </li>
+          <li class="flex items-center">
+            <svg class="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span>1配信あたり¥50</span>
+          </li>
+        </ul>
+        <% if @current_subscription&.plan_type == 'enterprise' %>
+          <button disabled class="w-full bg-gray-300 text-gray-600 py-3 px-6 rounded-lg font-medium cursor-not-allowed">現在のプラン</button>
+        <% else %>
+          <%= link_to "このプランを選択", checkout_confirmation_path(plan_type: "enterprise"), 
+              class: "block w-full bg-indigo-600 text-white py-3 px-6 rounded-lg hover:bg-indigo-700 font-medium text-center" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+

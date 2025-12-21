@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_10_09_121341) do
+ActiveRecord::Schema[7.1].define(version: 2025_10_10_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -68,6 +68,21 @@ ActiveRecord::Schema[7.1].define(version: 2025_10_09_121341) do
     t.index ["user_id"], name: "index_install_scripts_on_user_id"
   end
 
+  create_table "payments", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "campaign_id", null: false
+    t.integer "amount", null: false
+    t.string "payjp_charge_id", null: false
+    t.string "status", default: "pending", null: false
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_payments_on_campaign_id"
+    t.index ["payjp_charge_id"], name: "index_payments_on_payjp_charge_id"
+    t.index ["status"], name: "index_payments_on_status"
+    t.index ["user_id"], name: "index_payments_on_user_id"
+  end
+
   create_table "push_subscriptions", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "endpoint", null: false
@@ -78,6 +93,20 @@ ActiveRecord::Schema[7.1].define(version: 2025_10_09_121341) do
     t.datetime "updated_at", null: false
     t.index ["endpoint"], name: "index_push_subscriptions_on_endpoint", unique: true
     t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
+  end
+
+  create_table "subscriptions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "plan_type", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "trial_ends_at"
+    t.string "payjp_subscription_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["payjp_subscription_id"], name: "index_subscriptions_on_payjp_subscription_id"
+    t.index ["plan_type"], name: "index_subscriptions_on_plan_type"
+    t.index ["status"], name: "index_subscriptions_on_status"
+    t.index ["user_id"], name: "index_subscriptions_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -93,14 +122,23 @@ ActiveRecord::Schema[7.1].define(version: 2025_10_09_121341) do
     t.string "company_name", default: "", null: false
     t.string "domain", default: "", null: false
     t.string "api_key", default: "", null: false
+    t.string "subscription_plan", default: "trial"
+    t.string "subscription_status", default: "active"
+    t.datetime "trial_ends_at"
+    t.string "payjp_customer_id"
     t.index ["api_key"], name: "index_users_on_api_key"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["subscription_plan"], name: "index_users_on_subscription_plan"
+    t.index ["subscription_status"], name: "index_users_on_subscription_status"
   end
 
   add_foreign_key "campaign_results", "campaigns"
   add_foreign_key "campaign_results", "push_subscriptions"
   add_foreign_key "campaigns", "users"
   add_foreign_key "install_scripts", "users"
+  add_foreign_key "payments", "campaigns"
+  add_foreign_key "payments", "users"
   add_foreign_key "push_subscriptions", "users"
+  add_foreign_key "subscriptions", "users"
 end
