@@ -32,11 +32,16 @@ class CheckoutController < ApplicationController
       end
       
       @amount = Subscription::PLAN_PRICES[@plan_type.to_sym]
-      @description = "#{@plan_type.capitalize} Plan"
       
       if @plan_type == 'trial'
-        redirect_to plans_path, alert: "無料トライアルはプラン選択ページから開始できます。"
-        return
+        @description = "無料トライアル (15日間)"
+        @amount = 0
+        unless current_user.created_at > 15.days.ago
+          redirect_to plans_path, alert: "無料トライアルは新規アカウントのみ利用できます。"
+          return
+        end
+      else
+        @description = "#{@plan_type.capitalize} Plan"
       end
     end
 
@@ -131,11 +136,6 @@ class CheckoutController < ApplicationController
     
     amount = Subscription::PLAN_PRICES[plan_type.to_sym]
     
-    if plan_type == 'trial'
-      redirect_to plans_path, alert: "無料トライアルはプラン選択ページから開始できます。"
-      return
-    end
-    
     Rails.logger.info "Processing subscription payment - plan: #{plan_type}, amount: #{amount}"
   
     customer_id = current_user.payjp_customer_id
@@ -149,6 +149,37 @@ class CheckoutController < ApplicationController
       customer_id = customer.id
       current_user.update!(payjp_customer_id: customer_id)
       Rails.logger.info "Created Pay.jp customer: #{customer_id}"
+    else
+      customer = Payjp::Customer.retrieve(customer_id)
+      customer.cards.create(card: payjp_token)
+      Rails.logger.info "Updated Pay.jp customer with new card: #{customer_id}"
+    end
+  
+    if plan_type == 'trial'
+      unless current_user.created_at > 15.days.ago
+        redirect_to plans_path, alert: "無料トライアルは新規アカウントのみ利用できます。"
+        return
+      end
+      
+      current_user.subscriptions.where(status: :active).update_all(status: :cancelled)
+      
+      subscription = current_user.subscriptions.create!(
+        plan_type: :trial,
+        status: :active,
+        trial_ends_at: 15.days.from_now
+      )
+  
+      current_user.update!(
+        subscription_plan: "trial",
+        subscription_status: "active",
+        trial_ends_at: 15.days.from_now
+      )
+  
+      Rails.logger.info "Trial subscription created successfully - ID: #{subscription.id}"
+      
+      redirect_to checkout_success_path(subscription_id: subscription.id), 
+                  notice: "無料トライアルを開始しました。15日後に自動的に標準プランへ切り替わります。"
+      return
     end
   
     charge_params = {
