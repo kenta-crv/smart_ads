@@ -1,61 +1,126 @@
-<div class="checkout-container">
-  <h1>決済確認</h1>
-  <p>プラン: <%= @description %></p>
-  <p>金額: <%= @amount %> 円</p>
+<div class="max-w-2xl mx-auto px-4 py-8">
+  <div class="bg-white rounded-lg shadow-lg p-8">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">決済確認</h1>
+      <div class="space-y-2 mt-6">
+        <div class="flex justify-between items-center py-3 border-b border-gray-200">
+          <span class="text-gray-600 font-medium">プラン:</span>
+          <span class="text-gray-900 font-semibold text-lg"><%= @description %></span>
+        </div>
+        <div class="flex justify-between items-center py-3">
+          <span class="text-gray-600 font-medium">金額:</span>
+          <span class="text-gray-900 font-bold text-2xl"><%= number_with_delimiter(@amount) %> 円</span>
+        </div>
+      </div>
+    </div>
 
-  <%= form_with url: checkout_create_path, method: :post, id: "payment-form" do |f| %>
-    <%= hidden_field_tag :plan_type, @plan_type %>
-    <%= hidden_field_tag :campaign_id, @campaign_id if @campaign_id %>
+    <%= form_with url: checkout_create_path, method: :post, id: "payment-form" do |f| %>
+      <%= hidden_field_tag :plan_type, @plan_type %>
+      <%= hidden_field_tag :campaign_id, @campaign_id if @campaign_id %>
 
-    <div id="card-element" class="border p-2 rounded"></div>
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          カード情報
+        </label>
+        <div id="card-element" class="border-2 border-gray-300 rounded-lg p-4 focus-within:border-indigo-500 transition-colors bg-white">
+        </div>
+        <div id="card-errors" class="mt-2 text-sm text-red-600 min-h-5"></div>
+      </div>
 
-    <div id="card-errors" class="text-red-500"></div>
-
-    <%= submit_tag "決済を完了する", class: "bg-blue-500 text-white py-2 px-4 rounded" %>
-  <% end %>
+      <div class="pt-4">
+        <%= submit_tag "決済を完了する", 
+            class: "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed",
+            id: "submit-button" %>
+      </div>
+    <% end %>
+  </div>
 </div>
 
 <script>
+  (function() {
+    const reloadKey = 'checkout_confirmation_loaded';
+    const hasReloaded = sessionStorage.getItem(reloadKey);
+    
+    if (!hasReloaded) {
+      sessionStorage.setItem(reloadKey, 'true');
+      const url = new URL(window.location.href);
+      url.searchParams.set('_reload', Date.now().toString());
+      window.location.href = url.toString();
+      return;
+    }
+  })();
+
   document.addEventListener('turbo:load', function() {
-    if (typeof Payjp === 'undefined') {
-      console.error('Payjp SDK not loaded.');
+    const cardElementDiv = document.getElementById('card-element');
+    if (!cardElementDiv) return;
+
+    if (typeof Payjp === 'undefined' || !window.payjpInstance) {
+      console.error('Payjp SDK not loaded, performing hard reload...');
+      setTimeout(function() {
+        if (typeof Payjp === 'undefined' || !window.payjpInstance) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('_reload', Date.now().toString());
+          window.location.href = url.toString();
+        }
+      }, 500);
       return;
     }
 
-    const payjp = Payjp('<%= j @payjp_public_key %>');
+    cardElementDiv.innerHTML = '';
+
+    const payjp = window.payjpInstance;
     const elements = payjp.elements();
+
     const cardElement = elements.create('card', {
       style: {
         base: {
           fontSize: '16px',
-          color: '#333',
+          color: '#1f2937',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
           '::placeholder': {
-            color: '#aab7c4'
+            color: '#9ca3af'
           }
         },
         invalid: {
-          color: '#fa755a'
+          color: '#ef4444',
+          iconColor: '#ef4444'
         }
       }
     });
 
-    const mountEl = document.getElementById('card-element');
-    if (mountEl && mountEl.innerHTML === '') {
-      cardElement.mount('#card-element');
-    }
+    cardElement.mount('#card-element');
 
     const form = document.getElementById('payment-form');
     const errorEl = document.getElementById('card-errors');
+    const submitButton = document.getElementById('submit-button');
+
+    cardElement.on('change', function(event) {
+      if (event.error) {
+        errorEl.textContent = event.error.message;
+        errorEl.classList.add('text-red-600');
+      } else {
+        errorEl.textContent = '';
+        errorEl.classList.remove('text-red-600');
+      }
+    });
 
     form.addEventListener('submit', async function(event) {
       event.preventDefault();
       errorEl.textContent = '';
+      errorEl.classList.remove('text-red-600');
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = '処理中...';
+        submitButton.classList.add('opacity-75', 'cursor-not-allowed');
+      }
 
       try {
         const result = await payjp.createToken(cardElement);
 
         if (result.error) {
           errorEl.textContent = result.error.message || 'カード情報にエラーがあります。';
+          errorEl.classList.add('text-red-600');
           console.error('Payjp error:', result.error);
         } else {
           const tokenInput = document.createElement('input');
@@ -63,12 +128,18 @@
           tokenInput.setAttribute('name', 'payjp_token');
           tokenInput.setAttribute('value', result.id);
           form.appendChild(tokenInput);
-
           form.submit();
         }
       } catch (err) {
-        errorEl.textContent = '決済処理中にエラーが発生しました。';
+        errorEl.textContent = '決済処理中にエラーが発生しました。もう一度お試しください。';
+        errorEl.classList.add('text-red-600');
         console.error('Unexpected error:', err);
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = '決済を完了する';
+          submitButton.classList.remove('opacity-75', 'cursor-not-allowed');
+        }
       }
     });
   });

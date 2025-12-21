@@ -7,11 +7,28 @@
         <div>
           <h2 class="text-xl font-semibold text-gray-800">現在のプラン</h2>
           <p class="text-2xl font-bold text-indigo-600 mt-2">
-            <%= current_user.current_subscription&.plan_type&.capitalize || "なし" %>
-            <% if current_user.on_trial? %>
-              <span class="text-sm text-blue-600">(トライアル中)</span>
+            <% subscription = current_user.current_subscription %>
+            <% if subscription %>
+              <%= subscription.plan_type.capitalize %>
+              <% if subscription.trial? && subscription.trial_active? %>
+                <span class="text-sm text-blue-600">(トライアル中)</span>
+                <p class="text-sm text-gray-600 mt-1">
+                  トライアル終了日: <%= subscription.trial_ends_at.strftime("%Y年%m月%d日") %>
+                </p>
+              <% end %>
+            <% else %>
+              なし
             <% end %>
           </p>
+          <% if current_user.on_trial? %>
+            <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p class="text-sm text-blue-800">
+                <strong>無料トライアル中</strong><br>
+                終了日: <%= current_user.trial_ends_at.strftime("%Y年%m月%d日") %><br>
+                残り: <%= ((current_user.trial_ends_at - Time.current) / 1.day).ceil %>日
+              </p>
+            </div>
+          <% end %>
         </div>
         <div class="flex space-x-4">
           <%= link_to "プラン管理", user_subscription_path, 
