@@ -39,7 +39,7 @@ class CampaignsController < ApplicationController
   def confirm_payment
     @campaign = current_user.campaigns.find(params[:id])
     recipient_count = current_user.push_subscriptions.where(status: "active").count
-    @delivery_cost = recipient_count * Subscription::DELIVERY_COST
+    @delivery_cost = skip_delivery_payment? ? 0 : recipient_count * Subscription::DELIVERY_COST
     
     unless current_user.can_send_campaign?(recipient_count)
       redirect_to user_campaigns_path(current_user), 
@@ -58,7 +58,7 @@ class CampaignsController < ApplicationController
   def send_campaign
     recipient_count = current_user.push_subscriptions.where(status: "active").count
     
-    delivery_cost = recipient_count * Subscription::DELIVERY_COST
+    delivery_cost = skip_delivery_payment? ? 0 : recipient_count * Subscription::DELIVERY_COST
     
     subscription = current_user.current_subscription
     unless subscription&.can_send_delivery?(recipient_count)
@@ -71,30 +71,26 @@ class CampaignsController < ApplicationController
       redirect_to confirm_payment_user_campaign_path(current_user, @campaign)
       return
     end
-
-    send_campaign_directly(@campaign)
-    redirect_to user_campaigns_path(@campaign.user), notice: "キャンペーンを送信しました！"
+    result = send_campaign_directly(@campaign)
+    redirect_to user_campaigns_path(@campaign.user),
+                notice: "キャンペーンを送信しました！（成功: #{result[:sent]}件、失敗: #{result[:failed]}件）"
+  rescue => e
+    Rails.logger.error "Campaign send failed (campaign_id=#{@campaign.id}): #{e.class} - #{e.message}"
+    redirect_to user_campaign_path(@campaign),
+                alert: "キャンペーンの送信に失敗しました: #{e.message}"
   end
 
   private
 
   def send_campaign_directly(campaign)
-    campaign.update(status: "sending")
-
-    # Record results for all active subscriptions
-    campaign.user.push_subscriptions.where(status: "active").each do |sub|
-      CampaignResult.create!(
-        campaign: campaign,
-        push_subscription: sub,
-        status: "completed",
-        delivered_at: Time.current
-      )
-    end
-
-    campaign.update(status: "completed")
+    ::PushNotificationSender.deliver(campaign)
   end
 
   private
+
+  def skip_delivery_payment?
+    Rails.env.development? || ENV["SKIP_DELIVERY_PAYMENT"] == "true"
+  end
 
   def set_campaign
     @campaign = current_user.campaigns.find(params[:id])
