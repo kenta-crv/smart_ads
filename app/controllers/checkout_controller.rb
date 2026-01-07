@@ -17,7 +17,7 @@ class CheckoutController < ApplicationController
     if @campaign_id.present?
       @campaign = current_user.campaigns.find(@campaign_id)
       recipient_count = current_user.push_subscriptions.where(status: "active").count
-      @amount = recipient_count * Subscription::DELIVERY_COST
+      @amount = skip_delivery_payment? ? 0 : recipient_count * Subscription::DELIVERY_COST
       @description = "Campaign delivery: #{@campaign.title}"
       
       unless current_user.can_send_campaign?(recipient_count)
@@ -102,14 +102,19 @@ class CheckoutController < ApplicationController
   def process_delivery_payment(campaign_id, payjp_token)
     campaign = current_user.campaigns.find(campaign_id)
     recipient_count = current_user.push_subscriptions.where(status: "active").count
-    amount = recipient_count * Subscription::DELIVERY_COST
+    amount = skip_delivery_payment? ? 0 : recipient_count * Subscription::DELIVERY_COST
 
-    charge = Payjp::Charge.create(
-      amount: amount,
-      currency: 'jpy',
-      card: payjp_token,
-      description: "Campaign delivery: #{campaign.title}"
-    )
+    charge =
+      if amount.zero?
+        OpenStruct.new(id: "dev-skip-charge", paid: true)
+      else
+        Payjp::Charge.create(
+          amount: amount,
+          currency: 'jpy',
+          card: payjp_token,
+          description: "Campaign delivery: #{campaign.title}"
+        )
+      end
 
     payment = current_user.payments.create!(
       campaign: campaign,
@@ -120,8 +125,15 @@ class CheckoutController < ApplicationController
     )
 
     if payment.succeeded?
-      send_campaign(campaign)
-      redirect_to checkout_success_path(payment_id: payment.id), notice: "決済が完了し、キャンペーンを送信しました。"
+      begin
+        result = send_campaign(campaign)
+        redirect_to checkout_success_path(payment_id: payment.id),
+                    notice: "決済が完了し、キャンペーンを送信しました。（成功: #{result[:sent]}件、失敗: #{result[:failed]}件）"
+      rescue => e
+        Rails.logger.error "Campaign send failed after payment (campaign_id=#{campaign.id}): #{e.class} - #{e.message}"
+        redirect_to checkout_success_path(payment_id: payment.id),
+                    alert: "決済は完了しましたが、キャンペーン送信に失敗しました: #{e.message}"
+      end
     else
       redirect_to checkout_confirmation_path(campaign_id: campaign_id),
                   alert: "決済に失敗しました。"
@@ -218,18 +230,10 @@ class CheckoutController < ApplicationController
   end
 
   def send_campaign(campaign)
-    campaign.update(status: "sending")
+    ::PushNotificationSender.deliver(campaign)
+  end
 
-    campaign.user.push_subscriptions.where(status: "active").each do |sub|
-      CampaignResult.create!(
-        campaign: campaign,
-        push_subscription: sub,
-        status: "completed",
-        delivered_at: Time.current
-      )
-    end
-
-    campaign.update(status: "completed")
+  def skip_delivery_payment?
+    Rails.env.development? || ENV["SKIP_DELIVERY_PAYMENT"] == "true"
   end
 end
-
