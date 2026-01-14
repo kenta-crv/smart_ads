@@ -2,6 +2,10 @@ class CheckoutController < ApplicationController
   before_action :authenticate_user!
 
   def confirmation
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
     @plan_type = params[:plan_type]
     @campaign_id = params[:campaign_id]
     
@@ -13,7 +17,7 @@ class CheckoutController < ApplicationController
     if @campaign_id.present?
       @campaign = current_user.campaigns.find(@campaign_id)
       recipient_count = current_user.push_subscriptions.where(status: "active").count
-      @amount = recipient_count * Subscription::DELIVERY_COST
+      @amount = skip_delivery_payment? ? 0 : recipient_count * Subscription::DELIVERY_COST
       @description = "Campaign delivery: #{@campaign.title}"
       
       unless current_user.can_send_campaign?(recipient_count)
@@ -28,11 +32,16 @@ class CheckoutController < ApplicationController
       end
       
       @amount = Subscription::PLAN_PRICES[@plan_type.to_sym]
-      @description = "#{@plan_type.capitalize} Plan"
       
       if @plan_type == 'trial'
-        redirect_to plans_path, alert: "無料トライアルはプラン選択ページから開始できます。"
-        return
+        @description = "無料トライアル (15日間)"
+        @amount = 0
+        unless current_user.created_at > 15.days.ago
+          redirect_to plans_path, alert: "無料トライアルは新規アカウントのみ利用できます。"
+          return
+        end
+      else
+        @description = "#{@plan_type.capitalize} Plan"
       end
     end
 
@@ -93,14 +102,19 @@ class CheckoutController < ApplicationController
   def process_delivery_payment(campaign_id, payjp_token)
     campaign = current_user.campaigns.find(campaign_id)
     recipient_count = current_user.push_subscriptions.where(status: "active").count
-    amount = recipient_count * Subscription::DELIVERY_COST
+    amount = skip_delivery_payment? ? 0 : recipient_count * Subscription::DELIVERY_COST
 
-    charge = Payjp::Charge.create(
-      amount: amount,
-      currency: 'jpy',
-      card: payjp_token,
-      description: "Campaign delivery: #{campaign.title}"
-    )
+    charge =
+      if amount.zero?
+        OpenStruct.new(id: "dev-skip-charge", paid: true)
+      else
+        Payjp::Charge.create(
+          amount: amount,
+          currency: 'jpy',
+          card: payjp_token,
+          description: "Campaign delivery: #{campaign.title}"
+        )
+      end
 
     payment = current_user.payments.create!(
       campaign: campaign,
@@ -111,8 +125,15 @@ class CheckoutController < ApplicationController
     )
 
     if payment.succeeded?
-      send_campaign(campaign)
-      redirect_to checkout_success_path(payment_id: payment.id), notice: "決済が完了し、キャンペーンを送信しました。"
+      begin
+        result = send_campaign(campaign)
+        redirect_to checkout_success_path(payment_id: payment.id),
+                    notice: "決済が完了し、キャンペーンを送信しました。（成功: #{result[:sent]}件、失敗: #{result[:failed]}件）"
+      rescue => e
+        Rails.logger.error "Campaign send failed after payment (campaign_id=#{campaign.id}): #{e.class} - #{e.message}"
+        redirect_to checkout_success_path(payment_id: payment.id),
+                    alert: "決済は完了しましたが、キャンペーン送信に失敗しました: #{e.message}"
+      end
     else
       redirect_to checkout_confirmation_path(campaign_id: campaign_id),
                   alert: "決済に失敗しました。"
@@ -127,11 +148,6 @@ class CheckoutController < ApplicationController
     
     amount = Subscription::PLAN_PRICES[plan_type.to_sym]
     
-    if plan_type == 'trial'
-      redirect_to plans_path, alert: "無料トライアルはプラン選択ページから開始できます。"
-      return
-    end
-    
     Rails.logger.info "Processing subscription payment - plan: #{plan_type}, amount: #{amount}"
   
     customer_id = current_user.payjp_customer_id
@@ -145,6 +161,37 @@ class CheckoutController < ApplicationController
       customer_id = customer.id
       current_user.update!(payjp_customer_id: customer_id)
       Rails.logger.info "Created Pay.jp customer: #{customer_id}"
+    else
+      customer = Payjp::Customer.retrieve(customer_id)
+      customer.cards.create(card: payjp_token)
+      Rails.logger.info "Updated Pay.jp customer with new card: #{customer_id}"
+    end
+  
+    if plan_type == 'trial'
+      unless current_user.created_at > 15.days.ago
+        redirect_to plans_path, alert: "無料トライアルは新規アカウントのみ利用できます。"
+        return
+      end
+      
+      current_user.subscriptions.where(status: :active).update_all(status: :cancelled)
+      
+      subscription = current_user.subscriptions.create!(
+        plan_type: :trial,
+        status: :active,
+        trial_ends_at: 15.days.from_now
+      )
+  
+      current_user.update!(
+        subscription_plan: "trial",
+        subscription_status: "active",
+        trial_ends_at: 15.days.from_now
+      )
+  
+      Rails.logger.info "Trial subscription created successfully - ID: #{subscription.id}"
+      
+      redirect_to checkout_success_path(subscription_id: subscription.id), 
+                  notice: "無料トライアルを開始しました。15日後に自動的に標準プランへ切り替わります。"
+      return
     end
   
     charge_params = {
@@ -183,18 +230,10 @@ class CheckoutController < ApplicationController
   end
 
   def send_campaign(campaign)
-    campaign.update(status: "sending")
+    ::PushNotificationSender.deliver(campaign)
+  end
 
-    campaign.user.push_subscriptions.where(status: "active").each do |sub|
-      CampaignResult.create!(
-        campaign: campaign,
-        push_subscription: sub,
-        status: "completed",
-        delivered_at: Time.current
-      )
-    end
-
-    campaign.update(status: "completed")
+  def skip_delivery_payment?
+    Rails.env.development? || ENV["SKIP_DELIVERY_PAYMENT"] == "true"
   end
 end
-

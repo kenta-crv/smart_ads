@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_10_10_000003) do
+ActiveRecord::Schema[7.1].define(version: 2025_10_10_000005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -59,6 +59,21 @@ ActiveRecord::Schema[7.1].define(version: 2025_10_10_000003) do
     t.index ["user_id"], name: "index_campaigns_on_user_id"
   end
 
+  create_table "distribution_subscribers", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "email", null: false
+    t.string "first_name"
+    t.string "last_name"
+    t.string "source_url", null: false
+    t.datetime "permission_granted_at", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status"], name: "index_distribution_subscribers_on_status"
+    t.index ["user_id", "email"], name: "index_distribution_subscribers_on_user_id_and_email"
+    t.index ["user_id"], name: "index_distribution_subscribers_on_user_id"
+  end
+
   create_table "install_scripts", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.text "script_code", null: false
@@ -70,7 +85,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_10_10_000003) do
 
   create_table "payments", force: :cascade do |t|
     t.bigint "user_id", null: false
-    t.bigint "campaign_id", null: false
+    t.bigint "campaign_id"
     t.integer "amount", null: false
     t.string "payjp_charge_id", null: false
     t.string "status", default: "pending", null: false
@@ -136,6 +151,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_10_10_000003) do
   add_foreign_key "campaign_results", "campaigns"
   add_foreign_key "campaign_results", "push_subscriptions"
   add_foreign_key "campaigns", "users"
+  add_foreign_key "distribution_subscribers", "users"
   add_foreign_key "install_scripts", "users"
   add_foreign_key "payments", "campaigns"
   add_foreign_key "payments", "users"
