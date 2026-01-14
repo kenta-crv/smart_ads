@@ -1,5 +1,7 @@
 class UsersController < ApplicationController
+  before_action :authenticate_user!
   before_action :set_user, only: %i[show edit update destroy]
+  before_action :authorize_user!, only: %i[show edit update destroy]
 
   def index
     @users = User.all
@@ -41,6 +43,12 @@ class UsersController < ApplicationController
 
   def set_user
     @user = User.find(params[:id])
+  end
+
+  def authorize_user!
+    return if @user == current_user
+
+    redirect_to root_path, alert: "権限がありません。"
   end
 
   def user_params
