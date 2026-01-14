@@ -10,7 +10,7 @@
 
     <div class="grid md:grid-cols-3 gap-8">
       <% if @is_new_account %>
-        <div class="bg-white rounded-lg shadow-lg p-8 border-2 border-blue-200">
+        <div class="bg-white rounded-lg shadow-lg p-8 border-2 border-blue-200 <%= @current_subscription&.plan_type == 'trial' ? 'border-2 border-blue-500' : '' %>">
           <div class="text-center mb-6">
             <h2 class="text-2xl font-bold text-gray-900 mb-2">無料トライアル</h2>
             <p class="text-4xl font-bold text-blue-600 mb-4">¥0</p>
@@ -36,9 +36,11 @@
               <span>自動的に標準プランへ</span>
             </li>
           </ul>
-          <%= form_with url: select_plan_path, method: :post do |f| %>
-            <%= hidden_field_tag :plan_type, "trial" %>
-            <%= f.submit "無料トライアルを開始", class: "w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 font-medium" %>
+          <% if @current_subscription&.plan_type == 'trial' %>
+            <button disabled class="w-full bg-gray-300 text-gray-600 py-3 px-6 rounded-lg font-medium cursor-not-allowed">現在のプラン</button>
+          <% else %>
+            <%= link_to "このプランを選択", checkout_confirmation_path(plan_type: "trial"), 
+                class: "block w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 font-medium text-center" %>
           <% end %>
         </div>
       <% end %>

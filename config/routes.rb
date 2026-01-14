@@ -59,7 +59,7 @@ Rails.application.routes.draw do
   post 'plans/select', to: 'plans#select', as: :select_plan
 
   get 'embed.js', to: 'embed#show', as: :embed_script
-  post 'embed/register', to: 'embed#register', as: :embed_register
+  match 'embed/register', to: 'embed#register', via: [:post, :options], as: :embed_register
 
   # Health check
   get "up" => "rails/health#show", as: :rails_health_check

@@ -1,6 +1,7 @@
 class EmbedController < ApplicationController
   skip_before_action :verify_authenticity_token
   before_action :set_user_by_api_key
+  before_action :set_cors_headers
   after_action :set_cors_headers
 
   def set_cors_headers
@@ -22,14 +23,21 @@ class EmbedController < ApplicationController
     subscription_data = JSON.parse(request.body.read)
     
     if @user
-      push_subscription = @user.push_subscriptions.create!(
-        endpoint: subscription_data['endpoint'],
+      push_subscription = @user.push_subscriptions.find_or_initialize_by(
+        endpoint: subscription_data['endpoint']
+      )
+
+      push_subscription.assign_attributes(
         keys: subscription_data['keys'],
         browser: detect_browser,
         status: 'active'
       )
-      
-      render json: { success: true, id: push_subscription.id }, status: :created
+
+      if push_subscription.save
+        render json: { success: true, id: push_subscription.id }, status: :created
+      else
+        render json: { success: false, error: push_subscription.errors.full_messages.to_sentence }, status: :unprocessable_content
+      end
     else
       render json: { success: false, error: 'Invalid API key' }, status: :unauthorized
     end
@@ -55,12 +63,16 @@ class EmbedController < ApplicationController
   end
 
   def embed_script
+    vapid_public_key = Rails.application.credentials.dig(:vapid, :public_key) || ENV['VAPID_PUBLIC_KEY']
+
     <<~JAVASCRIPT
       (function() {
         'use strict';
         
         var API_KEY = '#{params[:api_key]}';
         var API_URL = '#{request.base_url}';
+        var VAPID_PUBLIC_KEY = '#{vapid_public_key}';
+        var wasExistingSubscription = false;
         
         if (!('Notification' in window)) {
           console.warn('This browser does not support notifications');
@@ -85,6 +97,11 @@ class EmbedController < ApplicationController
         
         if (!('PushManager' in window)) {
           console.warn('Push Manager is not supported in this browser');
+          return;
+        }
+
+        if (!VAPID_PUBLIC_KEY) {
+          console.error('Missing VAPID public key. Please set VAPID_PUBLIC_KEY on the server.');
           return;
         }
         
@@ -112,14 +129,22 @@ class EmbedController < ApplicationController
           navigator.serviceWorker.register('/service-worker.js')
             .then(function(registration) {
               console.log('Service Worker registered successfully');
-              return registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array('#{@user&.api_key || 'public_key_placeholder'}')
+              return registration.pushManager.getSubscription().then(function(existingSubscription) {
+                if (existingSubscription) {
+                  console.log('Existing push subscription found');
+                  wasExistingSubscription = true;
+                  return existingSubscription;
+                }
+                
+                return registration.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
               });
             })
             .then(function(subscription) {
               console.log('Push subscription created successfully');
-              sendSubscriptionToServer(subscription);
+              sendSubscriptionToServer(subscription, wasExistingSubscription);
             })
             .catch(function(error) {
               console.error('Service Worker registration failed:', error);
@@ -129,7 +154,11 @@ class EmbedController < ApplicationController
             });
         }
         
-        function sendSubscriptionToServer(subscription) {
+        function sendSubscriptionToServer(subscription, alreadyRegistered) {
+          if (alreadyRegistered === undefined) {
+            alreadyRegistered = false;
+          }
+          
           fetch(API_URL + '/embed/register?api_key=' + API_KEY, {
             method: 'POST',
             headers: {
@@ -149,7 +178,9 @@ class EmbedController < ApplicationController
           .then(function(data) {
             if (data.success) {
               console.log('Push subscription registered successfully');
-              showNotificationModal('success', '通知の許可が完了しました！');
+              if (!alreadyRegistered) {
+                showNotificationModal('success', '通知の許可が完了しました！');
+              }
             } else {
               console.error('Failed to register subscription:', data.error);
             }

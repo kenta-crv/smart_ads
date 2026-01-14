@@ -1,6 +1,6 @@
 class Payment < ApplicationRecord
   belongs_to :user
-  belongs_to :campaign
+  belongs_to :campaign, optional: true
 
   enum status: { pending: "pending", succeeded: "succeeded", failed: "failed" }
 

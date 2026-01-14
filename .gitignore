@@ -8,7 +8,6 @@
 /.bundle
 
 # Ignore all environment files (except templates).
-/.env*
 !/.env*.erb
 
 # Ignore all logfiles and tempfiles.
@@ -36,3 +35,5 @@
 
 /app/assets/builds/*
 !/app/assets/builds/.keep
+config.bat
+node_modules
