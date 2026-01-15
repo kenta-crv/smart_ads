@@ -23,15 +23,15 @@ Rails.application.routes.draw do
     resources :admins, only: [:index, :new, :create, :edit, :update, :destroy]
   end
 
-  namespace :user do
+  namespace :user, path: "client" do
     get 'dashboard/index'
     root "dashboard#index"
     resources :notifications
   end
 
-  get 'user/subscription', to: 'user/subscriptions#show', as: :user_subscription
-  patch 'user/subscription', to: 'user/subscriptions#update'
-  post 'user/subscription/cancel', to: 'user/subscriptions#cancel', as: :cancel_user_subscription
+  get 'client/subscription', to: 'user/subscriptions#show', as: :user_subscription
+  patch 'client/subscription', to: 'user/subscriptions#update'
+  post 'client/subscription/cancel', to: 'user/subscriptions#cancel', as: :cancel_user_subscription
 
   # Users and nested resources
   resources :users do
