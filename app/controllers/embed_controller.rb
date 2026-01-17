@@ -75,33 +75,18 @@ class EmbedController < ApplicationController
         var wasExistingSubscription = false;
         
         if (!('Notification' in window)) {
-          console.warn('This browser does not support notifications');
           return;
         }
         
-        if (window.location.protocol === 'file:') {
-          console.warn('⚠️ Service Workers require HTTP/HTTPS protocol.');
-          console.warn('📝 For testing, please use:');
-          console.warn('   1. http://localhost:3000/test_embed.html');
-          console.warn('   2. Or serve your HTML file via a local web server');
-          console.warn('   3. Or use ngrok to create a public URL');
-        }
-        
         if (!('serviceWorker' in navigator)) {
-          console.warn('Service Workers are not supported in this browser');
-          if (window.location.protocol === 'file:') {
-            console.warn('Note: Service Workers also require HTTP/HTTPS (not file://)');
-          }
           return;
         }
         
         if (!('PushManager' in window)) {
-          console.warn('Push Manager is not supported in this browser');
           return;
         }
 
         if (!VAPID_PUBLIC_KEY) {
-          console.error('Missing VAPID public key. Please set VAPID_PUBLIC_KEY on the server.');
           return;
         }
         
@@ -111,7 +96,6 @@ class EmbedController < ApplicationController
               if (permission === 'granted') {
                 registerServiceWorker();
               } else {
-                console.log('Notification permission denied');
               }
             });
           } else if (Notification.permission === 'granted') {
@@ -121,17 +105,13 @@ class EmbedController < ApplicationController
         
         function registerServiceWorker() {
           if (window.location.protocol === 'file:') {
-            console.error('❌ Cannot register Service Worker from file:// protocol');
-            console.error('Please use http://localhost:3000/test_embed.html for testing');
             return;
           }
           
           navigator.serviceWorker.register('/service-worker.js')
             .then(function(registration) {
-              console.log('Service Worker registered successfully');
               return registration.pushManager.getSubscription().then(function(existingSubscription) {
                 if (existingSubscription) {
-                  console.log('Existing push subscription found');
                   wasExistingSubscription = true;
                   return existingSubscription;
                 }
@@ -143,14 +123,9 @@ class EmbedController < ApplicationController
               });
             })
             .then(function(subscription) {
-              console.log('Push subscription created successfully');
               sendSubscriptionToServer(subscription, wasExistingSubscription);
             })
             .catch(function(error) {
-              console.error('Service Worker registration failed:', error);
-              if (error.message.includes('protocol') || error.message.includes('file:')) {
-                console.error('❌ Service Workers require HTTP/HTTPS. Use http://localhost:3000/test_embed.html');
-              }
             });
         }
         
@@ -177,16 +152,13 @@ class EmbedController < ApplicationController
           })
           .then(function(data) {
             if (data.success) {
-              console.log('Push subscription registered successfully');
               if (!alreadyRegistered) {
                 showNotificationModal('success', '通知の許可が完了しました！');
               }
             } else {
-              console.error('Failed to register subscription:', data.error);
             }
           })
           .catch(function(error) {
-            console.error('Error rwegistering subscription:', error);
           });
         }
         
